@@ -1,34 +1,65 @@
-import React from 'react';
 import { Stage, Layer, Rect } from 'react-konva';
-import { Container, Typography, Box } from '@mui/material';
+import { Container, Box } from '@mui/material';
 
-// Function to create the layout of pieces based on combination
+// Function to create the layout of pieces based on combination (handles both rows and columns cases)
 const generateLayout = (paperWidth, paperHeight, pieceWidth, pieceHeight, combination) => {
     const layout = [];
-    const numRowsLandscape = combination.num_rows_landscape;
-    const remainingHeight = combination.remaining_height;
+    const caseType = combination.case;
 
-    // Add landscape pieces
-    for (let row = 0; row < numRowsLandscape; row++) {
-        for (let col = 0; col < Math.floor(paperWidth / pieceWidth); col++) {
-            layout.push({
-                x: col * pieceWidth,
-                y: row * pieceHeight,
-                width: pieceWidth,
-                height: pieceHeight,
-            });
+
+    if (caseType === 'rows') {
+        const numRowsLandscape = combination.num_rows_landscape;
+        const remainingHeight = combination.remaining_height;
+
+        // Add landscape pieces (rows)
+        for (let row = 0; row < numRowsLandscape; row++) {
+            for (let col = 0; col < Math.floor(paperWidth / pieceWidth); col++) {
+                layout.push({
+                    x: col * pieceWidth,
+                    y: row * pieceHeight,
+                    width: pieceWidth,
+                    height: pieceHeight,
+                });
+            }
         }
-    }
 
-    // Add portrait pieces in the remaining height
-    for (let row = 0; row < Math.floor(remainingHeight / pieceWidth); row++) {
-        for (let col = 0; col < Math.floor(paperWidth / pieceHeight); col++) {
-            layout.push({
-                x: col * pieceHeight,
-                y: paperHeight - remainingHeight + row * pieceWidth,
-                width: pieceHeight,
-                height: pieceWidth,
-            });
+        // Add portrait pieces in the remaining height
+        for (let row = 0; row < Math.floor(remainingHeight / pieceWidth); row++) {
+            for (let col = 0; col < Math.floor(paperWidth / pieceHeight); col++) {
+                layout.push({
+                    x: col * pieceHeight,
+                    y: paperHeight - remainingHeight + row * pieceWidth,
+                    width: pieceHeight,
+                    height: pieceWidth,
+                });
+            }
+        }
+    } else if (caseType === 'columns') {
+        const numColsLandscape = combination.num_cols_landscape;
+        const remainingWidth = combination.remaining_width;
+
+        // Add landscape pieces (columns)
+        for (let col = 0; col < numColsLandscape; col++) {
+            for (let row = 0; row < Math.floor(paperHeight / pieceHeight); row++) {
+                layout.push({
+                    x: col * pieceWidth,
+                    y: row * pieceHeight,
+                    width: pieceWidth,
+                    height: pieceHeight,
+                });
+            }
+        }
+
+        // Add portrait pieces in the remaining width
+        for (let col = 0; col < Math.floor(remainingWidth / pieceHeight); col++) {
+            for (let row = 0; row < Math.floor(paperHeight / pieceWidth); row++) {
+                layout.push({
+                    x: paperWidth - remainingWidth + col * pieceHeight,
+                    y: row * pieceWidth,
+                    width: pieceHeight,
+                    height: pieceWidth,
+                });
+            }
         }
     }
 
@@ -48,12 +79,10 @@ const PaperVisualization = ({ paperWidth, paperHeight, pieceWidth, pieceHeight, 
     return (
         <Container maxWidth="sm">
             <Box sx={{ marginTop: 4, textAlign: 'center' }}>
-                <Typography variant="h6">Cut Visualization</Typography>
-
                 {/* Render the paper and pieces using React Konva */}
                 <Stage width={canvasWidth} height={canvasHeight}>
                     <Layer>
-                        {/* Draw the paper boundary */}
+                        {/* Draw the paper boundary and fill it with empty space (gray) */}
                         <Rect
                             x={0}
                             y={0}
@@ -61,7 +90,7 @@ const PaperVisualization = ({ paperWidth, paperHeight, pieceWidth, pieceHeight, 
                             height={paperHeight * scalingFactor}
                             stroke="black"
                             strokeWidth={2}
-                            fill="white"
+                            fill="white"  // Gray for empty space
                         />
                         
                         {/* Draw each piece */}
@@ -74,7 +103,7 @@ const PaperVisualization = ({ paperWidth, paperHeight, pieceWidth, pieceHeight, 
                                 height={piece.height * scalingFactor}
                                 stroke="red"
                                 strokeWidth={1}
-                                fill="transparent"
+                                fill="transparent"  // Blue for the pieces
                             />
                         ))}
                     </Layer>
