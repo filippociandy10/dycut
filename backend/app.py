@@ -1,8 +1,10 @@
-from flask import Flask, render_template, request, jsonify
+from flask import Flask, flash, redirect, render_template, request, jsonify, url_for
 from flask_cors import CORS
+from flask_login import LoginManager, login_required, login_user, logout_user
 from flask_sqlalchemy import SQLAlchemy
-from models import db, CuttingHistory, PaperSizes
+from models import db, CuttingHistory, PaperSizes, User
 from dycut import find_one_optimize, find_all_optimize
+from logres import RegistrationForm, LoginForm
 import os
 
 app = Flask(__name__)
@@ -14,7 +16,10 @@ if not os.path.exists(os.path.join(os.path.dirname(__file__), 'db')):
 basedir = os.path.abspath(os.path.dirname(__file__))
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + os.path.join(basedir, 'db/cutting.db')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+app.config['SECRET_KEY'] = 'secretkey'
 
+login_manager = LoginManager()
+login_manager.init_app(app)
 db.init_app(app)
 
 CORS(app)
@@ -98,8 +103,52 @@ def get_paper_sizes():
         'paper_width': paper.paper_width,
         'paper_height': paper.paper_height
     } for paper in paper_sizes]
-
     return jsonify(paper_sizes_list)
+
+from flask import jsonify
+
+@app.route('/register', methods=['POST'])
+def register():
+    data = request.get_json()  # Get JSON data from the React frontend
+    username = data['username']
+    password = data['password']
+    confirm_password = data['confirm_password']
+
+    # Check if passwords match
+    if password != confirm_password:
+        return jsonify({'error': 'Passwords do not match'}), 400
+
+    # Check if the username is already taken
+    user = User.query.filter_by(username=username).first()
+    if user:
+        return jsonify({'error': 'Username already exists. Please choose a different one.'}), 400
+
+    # Create the new user
+    new_user = User(username=username)
+    new_user.set_password(password)
+    db.session.add(new_user)
+    db.session.commit()
+
+    # Return a success message to the frontend
+    return jsonify({'message': 'Registration successful! You can now log in.'}), 201
+
+
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    data = request.get_json()
+    username = data['username']
+    password = data['password']
+    user = User.query.filter_by(username=username).first()
+    if (user.check_password(password)):
+        return jsonify({'message': 'Login successful!'}), 200
+    return jsonify({'error': 'Either username or password is incorrect. Please try again.'}), 400
+
+@app.route('/logout')
+@login_required
+def logout():
+    logout_user()
+    return redirect(url_for('login'))
+
 if __name__ == '__main__':
     with app.app_context():
         db.create_all()
